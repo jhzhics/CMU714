@@ -19,9 +19,10 @@ def add(x, y):
     Return:
         Sum of x + y
     """
-    ### BEGIN YOUR CODE
-    pass
-    ### END YOUR CODE
+    return x + y
+
+        
+    
 
 
 def parse_mnist(image_filename, label_filename):
@@ -47,9 +48,31 @@ def parse_mnist(image_filename, label_filename):
                 labels of the examples.  Values should be of type np.uint8 and
                 for MNIST will contain the values 0-9.
     """
-    ### BEGIN YOUR CODE
-    pass
-    ### END YOUR CODE
+    with gzip.open(image_filename, "rb") as image_file, gzip.open(label_filename, "rb") as label_file:
+        # Read and unpack the magic number from the image file
+        magic, num_images = struct.unpack(">II", image_file.read(8))
+        #print(f"Magic number: {magic}, Number of images: {num_images}")
+        # Read and unpack the dimensions
+        rows, cols = struct.unpack(">II", image_file.read(8))
+        #print(f"Image dimensions: {rows}x{cols}")
+        dim = rows * cols
+        X = np.ndarray((num_images, dim), dtype=np.float32)
+        total_bytes = num_images * dim
+        all_bytes = image_file.read(total_bytes)
+        all_colors = np.frombuffer(all_bytes, dtype=np.uint8).reshape((num_images, dim))
+        X = all_colors.astype(np.float32) / 255.0
+
+        # Similarly, read the magic number and number of items from the label file
+        label_magic, num_labels = struct.unpack(">II", label_file.read(8))
+        #print(f"Label file magic number: {label_magic}, Number of labels: {num_labels}")
+        assert num_images == num_labels
+        y = np.ndarray(num_labels, dtype=np.uint8)
+        total_bytes = num_labels
+        all_bytes = label_file.read(total_bytes)
+        y = np.frombuffer(all_bytes, dtype=np.uint8)
+
+    return X, y
+
 
 
 def softmax_loss(Z, y):
@@ -67,9 +90,12 @@ def softmax_loss(Z, y):
     Returns:
         Average softmax loss over the sample.
     """
-    ### BEGIN YOUR CODE
-    pass
-    ### END YOUR CODE
+    expZ = np.exp(Z)
+    sumExpZ = np.sum(expZ, axis=1)
+    logSumExpZ = np.log(sumExpZ)
+    loss = np.mean(logSumExpZ - Z[np.arange(Z.shape[0]), y])
+    return loss
+
 
 
 def softmax_regression_epoch(X, y, theta, lr = 0.1, batch=100):
@@ -90,9 +116,21 @@ def softmax_regression_epoch(X, y, theta, lr = 0.1, batch=100):
     Returns:
         None
     """
-    ### BEGIN YOUR CODE
-    pass
-    ### END YOUR CODE
+    processed = 0
+    for i in range((X.shape[0] + batch - 1)// batch):
+        size = min(batch, X.shape[0] - processed)
+        lastprocessed = processed
+        processed = min(processed + batch, X.shape[0])
+        process_thistime = processed - lastprocessed
+        x = X[processed - size:processed]
+        yy = y[processed - size:processed]
+
+        h = x @ theta
+        z = np.exp(h)
+        z = z / np.sum(z, axis=1, keepdims=True)
+        iy = np.eye(theta.shape[1])[yy]
+        gradient = 1/process_thistime * x.T @ (z - iy)
+        theta -= lr * gradient
 
 
 def nn_epoch(X, y, W1, W2, lr = 0.1, batch=100):
@@ -117,9 +155,25 @@ def nn_epoch(X, y, W1, W2, lr = 0.1, batch=100):
     Returns:
         None
     """
-    ### BEGIN YOUR CODE
-    pass
-    ### END YOUR CODE
+    processed = 0
+    for i in range((X.shape[0] + batch - 1)// batch):
+        size = min(batch, X.shape[0] - processed)
+        lastprocessed = processed
+        processed = min(processed + batch, X.shape[0])
+        process_thistime = processed - lastprocessed
+        x = X[processed - size:processed]
+        yy = y[processed - size:processed]
+
+        h = x @ W1
+        h[h < 0] = 0
+        h2 = h @ W2
+        z = np.exp(h2)
+        z = z / np.sum(z, axis=1, keepdims=True)
+        iy = np.eye(W2.shape[1])[yy]
+        gradient1 = 1/process_thistime * h.T @ (z - iy)
+        gradient2 = 1/process_thistime * x.T @ ((z - iy) @ W2.T * (h > 0))
+        W2 -= lr * gradient1
+        W1 -= lr * gradient2
 
 
 

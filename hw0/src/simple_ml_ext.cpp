@@ -2,6 +2,9 @@
 #include <pybind11/numpy.h>
 #include <cmath>
 #include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <numeric>
 
 namespace py = pybind11;
 
@@ -31,10 +34,66 @@ void softmax_regression_epoch_cpp(const float *X, const unsigned char *y,
      * Returns:
      *     (None)
      */
+    // Allocate memory for the logits and gradients
+    int rounds = (m + batch - 1) / batch;
+    float *logits = new float[batch * k];
+    float *gradients = new float[n * k];
 
-    /// BEGIN YOUR CODE
+    for(int i = 0; i < rounds; i++)
+    {
+        memset(logits, 0, sizeof(float) * batch * k);
+        memset(gradients, 0, sizeof(float) * n * k);
 
-    /// END YOUR CODE
+        int beginx = i * batch;
+        int endx = std::min((i + 1) * batch, m);
+        int size = endx - beginx;
+
+        for(int j = beginx; j < endx; j++)
+        {
+            for(int l = 0; l < k; l++)
+            {
+                for(int p = 0; p < n; p++)
+                {
+                    logits[(j - beginx) * k + l] += X[j * n + p] * theta[p * k + l];
+                }
+            }
+        }
+        for(int idx = 0; idx < batch * k; idx++)
+        {
+            logits[idx] = exp(logits[idx]);
+        }
+        for(int idx = 0; idx < batch; idx++)
+        {
+            float sum = std::accumulate(logits + idx * k, logits + (idx + 1) * k, 0.0);
+            for(int l = 0; l < k; l++)
+            {
+                logits[idx * k + l] /= sum;
+            }
+        }
+        for(int j = beginx; j < endx; j++)
+        {
+            int pos = y[j];
+            logits[(j - beginx) * k + pos] -= 1;
+        }
+        
+        for(int j = beginx; j < endx; j++)
+        {
+            for(int l = 0; l < k; l++)
+            {
+                for(int p = 0; p < n; p++)
+                {
+                    gradients[p * k + l] += X[j * n + p] * logits[(j - beginx) * k + l];
+                }
+            }
+        }
+        for(int j = 0; j < n * k; j++)
+        {
+            theta[j] -= lr * gradients[j] / size;
+        }
+    }
+
+    delete [] logits;
+    delete [] gradients;
 }
 
 
