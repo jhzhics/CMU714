@@ -392,10 +392,20 @@ def find_topo_sort(node_list: List[Value]) -> List[Value]:
     after all its predecessors are traversed due to post-order DFS, we get a topological
     sort.
     """
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
+    visited = set()
+    topo_order = []
 
+    def dfs(node):
+        if node in visited:
+            return
+        visited.add(node)
+        for input_node in node.inputs:
+            dfs(input_node)
+        topo_order.append(node)
+    for node in node_list:
+        dfs(node)
+
+    return topo_order
 
 def topo_sort_dfs(node, visited, topo_order):
     """Post-order DFS"""
