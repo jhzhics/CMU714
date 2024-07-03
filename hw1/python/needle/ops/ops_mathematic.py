@@ -146,19 +146,19 @@ class Transpose(TensorOp):
 
         if self.axes is None:
             dim = a.ndim
-            self.axes = (dim - 2, dim -1)
+            axes = (dim - 2, dim -1)
+        else:
+            axes = self.axes
 
-        first = self.axes[0]
-        second = self.axes[1]
+        first = axes[0]
+        second = axes[1]
         axes = list(range(a.ndim))
         axes[first], axes[second] = axes[second], axes[first]
 
         return array_api.transpose(a, axes)
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return transpose(out_grad, axes=self.axes)
 
 
 def transpose(a, axes=None):
@@ -172,11 +172,8 @@ class Reshape(TensorOp):
     def compute(self, a):
         return array_api.reshape(a, self.shape)
 
-    def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
-
+    def gradient(self, out_grad : Tensor, node):
+        return reshape(out_grad, node.inputs[0].shape)
 
 def reshape(a, shape):
     return Reshape(shape)(a)
@@ -186,13 +183,40 @@ class BroadcastTo(TensorOp):
     def __init__(self, shape):
         self.shape = shape
 
+
     def compute(self, a):
+        a = array_api.squeeze(a)
+        if len(a.shape) > 0:
+            size = a.shape[len(a.shape)-1]
+            i = 0
+            for i in reversed(range(len(self.shape))):
+                if self.shape[i] == size:
+                    break
+            back_append = len(self.shape) - i - 1
+            front_append = i - len(a.shape) + 1
+            for i in range(front_append):
+                a = array_api.expand_dims(a, 0)
+            for i in range(back_append):
+                a = array_api.expand_dims(a, len(a.shape))
+            
+        # Now, broadcast to the target shape
         return array_api.broadcast_to(a, self.shape)
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        length = len(out_grad.shape)
+        ret = out_grad
+        cuted = 0
+        for i in range(length):
+            size_output = out_grad.shape[i]
+            if i >= len(node.inputs[0].shape):
+                size_input = 1
+            else:
+                size_input = node.inputs[0].shape[i]
+            if size_output != size_input:
+                ret = summation(ret, axes=i-cuted)
+                cuted += 1
+        ret = reshape(ret, node.inputs[0].shape)
+        return ret
 
 
 def broadcast_to(a, shape):
@@ -207,9 +231,7 @@ class Summation(TensorOp):
         return array_api.sum(a, axis = self.axes)
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return broadcast_to(out_grad, node.inputs[0].shape)
 
 
 def summation(a, axes=None):
@@ -222,7 +244,6 @@ class MatMul(TensorOp):
 
     def gradient(self, out_grad, node):
         node0, node1 = node.inputs
-        print("{} {} {}", out_grad.shape, node.inputs[0].shape, node.inputs[1].shape)
         tr1 = transpose(node.inputs[1])
         tr0 = transpose(node.inputs[0])
         ret0 = matmul(out_grad, tr1)
@@ -232,7 +253,6 @@ class MatMul(TensorOp):
         while ret1.shape.__len__() > node1.shape.__len__():
             ret1 = summation(ret1, axes=0)
 
-        print("{} {} {} {}", ret0.shape, ret1.shape, tr0.shape, tr1.shape)
         return ret0, ret1
 
 
@@ -245,9 +265,7 @@ class Negate(TensorOp):
         return array_api.negative(a)
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return negate(out_grad)
 
 
 def negate(a):
