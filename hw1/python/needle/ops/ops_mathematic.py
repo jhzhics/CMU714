@@ -79,9 +79,7 @@ class PowerScalar(TensorOp):
         return array_api.power(a, self.scalar)
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return out_grad * self.scalar
 
 
 def power_scalar(a, scalar):
@@ -116,9 +114,7 @@ class EWiseDiv(TensorOp):
         return array_api.divide(a, b)
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return out_grad / node.inputs[1], -out_grad * node.inputs[0] / (node.inputs[1] ** 2)
 
 
 def divide(a, b):
@@ -133,9 +129,7 @@ class DivScalar(TensorOp):
         return array_api.divide(a, self.scalar)
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return out_grad / self.scalar
 
 
 def divide_scalar(a, scalar):
@@ -159,7 +153,7 @@ class Transpose(TensorOp):
         axes = list(range(a.ndim))
         axes[first], axes[second] = axes[second], axes[first]
 
-        return array_api.transpose(a, axes = axes)
+        return array_api.transpose(a, axes)
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
@@ -227,9 +221,19 @@ class MatMul(TensorOp):
         return array_api.matmul(a, b)
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        node0, node1 = node.inputs
+        print("{} {} {}", out_grad.shape, node.inputs[0].shape, node.inputs[1].shape)
+        tr1 = transpose(node.inputs[1])
+        tr0 = transpose(node.inputs[0])
+        ret0 = matmul(out_grad, tr1)
+        ret1 = matmul(tr0, out_grad)
+        while ret0.shape.__len__() > node0.shape.__len__():
+            ret0 = summation(ret0, axes=0)
+        while ret1.shape.__len__() > node1.shape.__len__():
+            ret1 = summation(ret1, axes=0)
+
+        print("{} {} {} {}", ret0.shape, ret1.shape, tr0.shape, tr1.shape)
+        return ret0, ret1
 
 
 def matmul(a, b):
