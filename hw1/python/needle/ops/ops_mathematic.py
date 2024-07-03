@@ -299,15 +299,21 @@ def exp(a):
 
 class ReLU(TensorOp):
     def compute(self, a):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return array_api.multiply(a, array_api.greater_equal(a, 0))
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+
+        cache_input = node.inputs[0].cached_data
+
+        return out_grad * Tensor(array_api.greater_equal(cache_input, 0))
 
 
 def relu(a):
     return ReLU()(a)
+
+class Greater_or_equal(TensorOp):
+    def compute(self, a):
+        return array_api.greater_equal(a, 0)
+
+    def gradient(self, out_grad, node):
+        return out_grad * 0

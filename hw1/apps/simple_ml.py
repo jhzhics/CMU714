@@ -84,7 +84,7 @@ def softmax_loss(Z, y_one_hot):
     return average_loss
 
 
-def nn_epoch(X, y, W1, W2, lr=0.1, batch=100):
+def nn_epoch(X, y, W1 : ndl.Tensor, W2 : ndl.Tensor, lr=0.1, batch=100):
     """Run a single epoch of SGD for a two-layer neural network defined by the
     weights W1 and W2 (with no bias terms):
         logits = ReLU(X * W1) * W1
@@ -107,10 +107,26 @@ def nn_epoch(X, y, W1, W2, lr=0.1, batch=100):
             W1: ndl.Tensor[np.float32]
             W2: ndl.Tensor[np.float32]
     """
+    size = X.shape[0]
+    rounds = (size + batch - 1) // batch
+    for i in range(rounds):
+        start = i * batch
+        end = min(size, start + batch)
+        X_batch = ndl.Tensor(X[start:end])
+        y_batch_ori = y[start:end]
+        y_batch = np.eye(W2.shape[1])[y_batch_ori]
+        y_batch = ndl.Tensor(y_batch)
 
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
+        Z1 = ndl.relu(ndl.matmul(X_batch, W1))
+        Z2 = ndl.matmul(Z1, W2)
+        loss = softmax_loss(Z2, y_batch)
+        loss.backward()
+        new_W1 = W1.data - lr * W1.grad.data
+        new_W2 = W2.data - lr * W2.grad.data
+        W1 = ndl.Tensor(new_W1)
+        W2 = ndl.Tensor(new_W2)
+    
+    return W1, W2
 
 
 ### CODE BELOW IS FOR ILLUSTRATION, YOU DO NOT NEED TO EDIT
