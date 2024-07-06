@@ -182,10 +182,13 @@ def reshape(a, shape):
 class BroadcastTo(TensorOp):
     def __init__(self, shape):
         self.shape = shape
+        self.axes = []
 
 
     def compute(self, a):
         a = array_api.squeeze(a)
+        front_append = 0
+        back_append = 0
         if len(a.shape) > 0:
             size = a.shape[len(a.shape)-1]
             i = 0
@@ -198,23 +201,20 @@ class BroadcastTo(TensorOp):
                 a = array_api.expand_dims(a, 0)
             for i in range(back_append):
                 a = array_api.expand_dims(a, len(a.shape))
-            
+        else:
+            front_append = len(self.shape)
+
+        self.axes = [i for i in range(front_append)]
+        self.axes.extend([a.ndim - i - 1 for i in range(back_append)])
         # Now, broadcast to the target shape
         return array_api.broadcast_to(a, self.shape)
 
     def gradient(self, out_grad, node):
-        length = len(out_grad.shape)
         ret = out_grad
-        cuted = 0
-        for i in range(length):
-            size_output = out_grad.shape[i]
-            if i >= len(node.inputs[0].shape):
-                size_input = 1
-            else:
-                size_input = node.inputs[0].shape[i]
-            if size_output != size_input:
-                ret = summation(ret, axes=i-cuted)
-                cuted += 1
+        cutted = 0
+        for axis in self.axes:
+            ret = summation(ret, axes = axis - cutted)
+            cutted += 1
         ret = reshape(ret, node.inputs[0].shape)
         return ret
 

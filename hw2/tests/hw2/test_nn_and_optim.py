@@ -153,7 +153,10 @@ def linear_backward(lhs_shape, rhs_shape):
     np.random.seed(199)
     f = ndl.nn.Linear(*lhs_shape)
     f.bias.data = get_tensor(lhs_shape[-1])
+    print(f.weight.cached_data)
+    print(f.bias.cached_data)
     x = get_tensor(*rhs_shape)
+    print(x.cached_data)
     (f(x) ** 2).sum().backward()
     return x.grad.cached_data
 
@@ -2383,3 +2386,5 @@ def submit_mlp_resnet():
     mugrade.submit(train_epoch_1(7, 256, ndl.optim.Adam, lr=0.01, weight_decay=0.01))
     mugrade.submit(eval_epoch_1(12, 154))
     mugrade.submit(train_mnist_1(550, 1, ndl.optim.SGD, 0.01, 0.01, 7))
+
+test_nn_linear_backward_1()
