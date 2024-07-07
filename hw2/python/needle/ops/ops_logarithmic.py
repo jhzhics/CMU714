@@ -28,7 +28,6 @@ class LogSumExp(TensorOp):
         self.axes = axes
 
     def compute(self, Z):
-        print(Z)
         maxz = array_api.max(Z, axis = self.axes, keepdims = True)
         maxz_broadcasted = array_api.broadcast_to(maxz, Z.shape)
         Z1 = Z - maxz_broadcasted
@@ -39,11 +38,37 @@ class LogSumExp(TensorOp):
         return logsumexpz + maxz
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        input = node.inputs[0].cached_data
+        maxz = array_api.max(input, axis = self.axes, keepdims = True)
+        maxz_broadcasted = array_api.broadcast_to(maxz, input.shape)
+        maxz_broadcasted = array_api.reshape(maxz_broadcasted, input.shape)
+        input = input - maxz_broadcasted
+        input = Tensor(input)
+        expinput = exp(input)
+        sumexpinput = summation(expinput, axes = self.axes)
+        old_shape = input.shape
+        new_shape = list(old_shape)
+        axes = []
+        if self.axes is None:
+            self.axes = tuple(range(len(old_shape)))
+        elif isinstance(self.axes, int):
+            self.axes = [self.axes]
+        else:
+            self.axes = list(self.axes)
+        for i in self.axes:
+            new_shape[i] = 1
+        out_grad = reshape(out_grad, tuple(new_shape))
+        sumexpinput = reshape(sumexpinput, tuple(new_shape))
+        out_grad = broadcast_to(out_grad, node.inputs[0].shape)
+        sumexpinput = broadcast_to(sumexpinput, input.shape)
+        ret = multiply(out_grad, expinput)
+        ret = divide(ret, sumexpinput)
+        return ret
+
 
 
 def logsumexp(a, axes=None):
+
     return LogSumExp(axes=axes)(a)
+
 

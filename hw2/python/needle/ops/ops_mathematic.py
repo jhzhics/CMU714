@@ -182,41 +182,24 @@ def reshape(a, shape):
 class BroadcastTo(TensorOp):
     def __init__(self, shape):
         self.shape = shape
-        self.axes = []
-
 
     def compute(self, a):
-        a = array_api.squeeze(a)
-        front_append = 0
-        back_append = 0
-        if len(a.shape) > 0:
-            size = a.shape[len(a.shape)-1]
-            i = 0
-            for i in reversed(range(len(self.shape))):
-                if self.shape[i] == size:
-                    break
-            back_append = len(self.shape) - i - 1
-            front_append = i - len(a.shape) + 1
-            for i in range(front_append):
-                a = array_api.expand_dims(a, 0)
-            for i in range(back_append):
-                a = array_api.expand_dims(a, len(a.shape))
-        else:
-            front_append = len(self.shape)
-
-        self.axes = [i for i in range(front_append)]
-        self.axes.extend([a.ndim - i - 1 for i in reversed(range(back_append))])
-        # Now, broadcast to the target shape
-        return array_api.broadcast_to(a, self.shape)
+       return array_api.broadcast_to(a, self.shape)
 
     def gradient(self, out_grad, node):
-        ret = out_grad
-        cutted = 0
-        for axis in self.axes:
-            ret = summation(ret, axes = axis - cutted)
-            cutted += 1
-        ret = reshape(ret, node.inputs[0].shape)
+        shape = node.inputs[0].shape
+        extended = len(self.shape) - len(shape)
+        ret = summation(out_grad, axes=tuple(range(extended)))
+        axes = []
+        for i in range(len(shape)):
+            if shape[i] < self.shape[i]:
+                assert shape[i] == 1
+                axes.append(i)
+        ret = summation(ret, axes=tuple(axes))
+        ret = reshape(ret, shape)
         return ret
+
+
 
 
 def broadcast_to(a, shape):
@@ -227,11 +210,25 @@ class Summation(TensorOp):
     def __init__(self, axes: Optional[tuple] = None):
         self.axes = axes
 
+        
+
     def compute(self, a):
         return array_api.sum(a, axis = self.axes)
 
     def gradient(self, out_grad, node):
-        return broadcast_to(out_grad, node.inputs[0].shape)
+        oldshape = list(node.inputs[0].shape)
+        newshape = oldshape.copy()
+        if self.axes is None:
+            axes = tuple(range(len(oldshape)))
+        elif isinstance(self.axes, int):
+            axes = [self.axes]
+        else:
+            axes = self.axes
+        for axis in axes:
+            newshape[axis] = 1
+        ret = reshape(out_grad, newshape)
+        return broadcast_to(ret, oldshape)
+    
 
 
 def summation(a, axes=None):

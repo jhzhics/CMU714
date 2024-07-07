@@ -157,7 +157,8 @@ def linear_backward(lhs_shape, rhs_shape):
     print(f.bias.cached_data)
     x = get_tensor(*rhs_shape)
     print(x.cached_data)
-    (f(x) ** 2).sum().backward()
+    y = (f(x) ** 2).sum().backward()
+    print(y)
     return x.grad.cached_data
 
 
@@ -2386,3 +2387,4 @@ def submit_mlp_resnet():
     mugrade.submit(train_epoch_1(7, 256, ndl.optim.Adam, lr=0.01, weight_decay=0.01))
     mugrade.submit(eval_epoch_1(12, 154))
     mugrade.submit(train_mnist_1(550, 1, ndl.optim.SGD, 0.01, 0.01, 7))
+
