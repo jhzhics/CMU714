@@ -189,7 +189,6 @@ class LayerNorm1d(Module):
 
     def forward(self, x: Tensor) -> Tensor:
         assert x.shape[-1] == self.dim 
-        print(x)
         shape = list(x.shape)
         shape[-1] = 1
         mean = ops.summation(x, axes = len(x.shape) - 1) / x.shape[-1]
@@ -212,10 +211,14 @@ class Dropout(Module):
         self.p = p
 
     def forward(self, x: Tensor) -> Tensor:
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
-
+        if self.training:
+            mask = np.random.rand(*x.shape) <= 1 - self.p
+            mask = mask.astype(x.dtype)
+            mask = mask / (1 - self.p)
+            mask = Tensor(mask)
+            return x * mask
+        else:
+            return x
 
 class Residual(Module):
     def __init__(self, fn: Module):
@@ -223,7 +226,5 @@ class Residual(Module):
         self.fn = fn
 
     def forward(self, x: Tensor) -> Tensor:
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return x + self.fn(x)
 
