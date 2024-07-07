@@ -128,9 +128,17 @@ class Sequential(Module):
 
 class SoftmaxLoss(Module):
     def forward(self, logits: Tensor, y: Tensor):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        logsumexp = ops.logsumexp(logits, axes = (len(logits.shape) - 1))
+        onehot = init.one_hot(logits.shape[-1], y, dtype=logits.dtype)
+        zy = ops.multiply(logits, onehot)
+        zy = ops.summation(zy, axes = (len(logits.shape) - 1))
+        ret = logsumexp - zy
+        loss = ops.summation(ret)
+        batch_size = 1
+        for i in range(len(logits.shape) - 1):
+            batch_size *= logits.shape[i]
+        loss = ops.mul_scalar(loss, 1.0 / batch_size)
+        return loss
 
 
 class BatchNorm1d(Module):
@@ -154,14 +162,26 @@ class LayerNorm1d(Module):
         super().__init__()
         self.dim = dim
         self.eps = eps
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        self.gamma = Parameter(init.ones(dim, device=device, dtype=dtype))
+        self.beta = Parameter(init.zeros(dim, device=device, dtype=dtype))
 
     def forward(self, x: Tensor) -> Tensor:
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        assert x.shape[-1] == self.dim 
+        print(x)
+        shape = list(x.shape)
+        shape[-1] = 1
+        mean = ops.summation(x, axes = len(x.shape) - 1) / x.shape[-1]
+        mean = ops.reshape(mean, shape)
+        mean = ops.broadcast_to(mean, x.shape)
+        x1 = x - mean
+        x2 = x1 * x1
+        var = ops.summation(x2, axes = len(x.shape) - 1) / x.shape[-1]
+        var = ops.reshape(var, shape)
+        var = ops.broadcast_to(var, x.shape)
+        std = (var + self.eps) ** 0.5
+        x_hat = x1 / std
+        y = self.gamma * x_hat + self.beta
+        return y
 
 
 class Dropout(Module):
