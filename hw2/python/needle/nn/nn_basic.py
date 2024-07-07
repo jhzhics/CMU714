@@ -105,9 +105,7 @@ class Linear(Module):
 
 class Flatten(Module):
     def forward(self, X):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return ops.reshape(X, (X.shape[0], -1))
 
 
 class ReLU(Module):
@@ -147,14 +145,38 @@ class BatchNorm1d(Module):
         self.dim = dim
         self.eps = eps
         self.momentum = momentum
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        self.weight = Parameter(init.ones(dim, device=device, dtype=dtype))
+        self.bias = Parameter(init.zeros(dim, device=device, dtype=dtype))
+        self.running_mean = init.zeros(dim, device=device, dtype=dtype)
+        self.running_var = init.ones(dim, device=device, dtype=dtype)
 
     def forward(self, x: Tensor) -> Tensor:
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        assert x.shape[-1] == self.dim
+        shape = list(x.shape)
+        shape[0] = 1
+        mean1 = ops.summation(x, axes = 0) / x.shape[0]
+        
+        mean = ops.reshape(mean1, shape)
+        mean = ops.broadcast_to(mean, x.shape)
+        x1 = x - mean
+        x2 = x1 * x1
+        var1 = ops.summation(x2, axes = 0) / x.shape[0]
+        var = ops.reshape(var1, shape)
+        var = ops.broadcast_to(var, x.shape)
+        std = (var + self.eps) ** 0.5
+        x_hat = x1 / std
+
+        self.running_mean = (self.momentum * mean1
+                             + (1 - self.momentum) * self.running_mean).detach()
+    
+        self.running_var = (self.momentum * var1
+                            + (1 - self.momentum) * self.running_var).detach()
+
+        if self.training:
+            y = self.weight * x_hat + self.bias
+        else:
+            y = self.weight * (x - self.running_mean) / (self.running_var + self.eps) ** 0.5 + self.bias
+        return y
 
 
 class LayerNorm1d(Module):
@@ -204,3 +226,4 @@ class Residual(Module):
         ### BEGIN YOUR SOLUTION
         raise NotImplementedError()
         ### END YOUR SOLUTION
+
