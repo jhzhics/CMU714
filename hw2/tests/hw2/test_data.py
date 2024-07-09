@@ -11001,12 +11001,12 @@ def submit_dataloader():
     mugrade.submit(subl_y)
 
 
-if __name__ == "__main__":
-    test_flip_horizontal()
-    test_random_crop()
-    test_sequential_sampler()
-    test_random_sampler()
-    test_batch_sampler()
-    test_collate_mnist()
-    test_mnist_dataset()
-    test_dataloader()
+# if __name__ == "__main__":
+#     test_flip_horizontal()
+#     test_random_crop()
+#     test_sequential_sampler()
+#     test_random_sampler()
+#     test_batch_sampler()
+#     test_collate_mnist()
+#     test_mnist_dataset()
+#     test_dataloader()
