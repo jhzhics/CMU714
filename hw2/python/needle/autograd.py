@@ -378,7 +378,7 @@ def compute_gradient_of_variables(output_tensor, out_grad):
     node_to_output_grads_list[output_tensor] = [out_grad]
 
     # Traverse graph in reverse topological order given the output_node that we are taking gradient wrt.
-    reverse_topo_order = list(reversed(find_topo_sort([output_tensor])))
+    reverse_topo_order : list[Tensor] = list(reversed(find_topo_sort([output_tensor])))
     ret = []
 
     for node in reverse_topo_order:

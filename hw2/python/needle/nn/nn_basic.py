@@ -77,7 +77,26 @@ class Module:
 class Identity(Module):
     def forward(self, x):
         return x
+    
+# class Linear(Module):
+#     def __init__(self, in_features, out_features, bias=True, device=None, dtype="float32"):
+#         super().__init__()
+#         self.in_features = in_features
+#         self.out_features = out_features
 
+#         ### BEGIN YOUR SOLUTION
+#         self.weight = Parameter(init.kaiming_uniform(in_features, out_features, requires_grad=True))
+#         self.bias = Parameter(init.kaiming_uniform(out_features, 1, requires_grad=True).transpose()) if bias else None
+#         ### END YOUR SOLUTION
+
+#     def forward(self, X: Tensor) -> Tensor:
+#         ### BEGIN YOUR SOLUTION
+#         # X: N x in_feat, weight: in_feat x out_feat
+#         out = X.matmul(self.weight)
+#         if self.bias:
+#             out += self.bias.broadcast_to(out.shape)
+#         return out
+#         ### END YOUR SOLUTION
 
 class Linear(Module):
     def __init__(
@@ -86,16 +105,11 @@ class Linear(Module):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.weight = Parameter(
-            init.kaiming_uniform(in_features, out_features, device=device, dtype=dtype)
-        )
-        if bias:
-            bias = Parameter(init.kaiming_uniform(out_features, 1, device=device, dtype=dtype))
-            bias = ops.reshape(bias, (1, out_features))
-            self.bias = bias
+        self.weight = Parameter(init.kaiming_uniform(in_features, out_features))
+        self.bias = Parameter(init.kaiming_uniform(out_features, 1).transpose())
 
     def forward(self, X: Tensor) -> Tensor:
-        if hasattr(self, "bias"):
+        if self.bias is not None:
             z = ops.matmul(X, self.weight)
             bias_after_broadcast = ops.broadcast_to(self.bias, z.shape)
             z = ops.add(z, bias_after_broadcast)
@@ -135,7 +149,8 @@ class SoftmaxLoss(Module):
         batch_size = 1
         for i in range(len(logits.shape) - 1):
             batch_size *= logits.shape[i]
-        loss = ops.mul_scalar(loss, 1.0 / batch_size)
+        factor = np.array([1.0 / batch_size], dtype=loss.dtype)
+        loss = ops.mul_scalar(loss,  factor)
         return loss
 
 
