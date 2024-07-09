@@ -30,7 +30,7 @@ class SGD(Optimizer):
                 grad = w.grad.data + self.weight_decay * w.data
             else:
                 grad = w.grad.data
-                
+
             self.u[w] = self.momentum * self.u[w] + (1 - self.momentum) * grad
             w.data = w.data - self.lr * self.u[w]
 
@@ -66,10 +66,19 @@ class Adam(Optimizer):
         self.weight_decay = weight_decay
         self.t = 0
 
-        self.m = {}
-        self.v = {}
+        self.m : dict[ndl.Tensor, ndl.Tensor]= {}
+        self.v : dict[ndl.Tensor, ndl.Tensor]= {}
 
     def step(self):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        self.t += 1
+        for w in self.params:
+            grad = (w.grad + self.weight_decay * w.data).detach()
+            if not w in self.m:
+                self.m[w] = ndl.zeros_like(w)
+                self.v[w] = ndl.zeros_like(w)
+
+            self.m[w] =(self.beta1*self.m[w] + (1-self.beta1)*grad).detach()
+            self.v[w] = (self.beta2*self.v[w] + (1-self.beta2)*grad**2).detach()
+            u_hat = self.m[w] / (1-self.beta1**self.t)
+            v_hat = self.v[w] / (1-self.beta2**self.t)
+            w.data -= (self.lr * u_hat / (v_hat**0.5 + self.eps)).detach()

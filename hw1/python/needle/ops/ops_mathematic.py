@@ -192,7 +192,7 @@ class BroadcastTo(TensorOp):
         ret = summation(out_grad, axes=tuple(range(extended)))
         axes = []
         for i in range(len(shape)):
-            if shape[i] < self.shape[i]:
+            if shape[i] < ret.shape[i]:
                 assert shape[i] == 1
                 axes.append(i)
         ret = summation(ret, axes=tuple(axes))

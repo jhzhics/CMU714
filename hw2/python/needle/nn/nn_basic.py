@@ -106,7 +106,7 @@ class Linear(Module):
         self.in_features = in_features
         self.out_features = out_features
         self.weight = Parameter(init.kaiming_uniform(in_features, out_features))
-        self.bias = Parameter(init.kaiming_uniform(out_features, 1).transpose())
+        self.bias = Parameter(init.kaiming_uniform(out_features, 1).transpose()) if bias else None
 
     def forward(self, X: Tensor) -> Tensor:
         if self.bias is not None:
@@ -166,32 +166,17 @@ class BatchNorm1d(Module):
         self.running_var = init.ones(dim, device=device, dtype=dtype)
 
     def forward(self, x: Tensor) -> Tensor:
-        assert x.shape[-1] == self.dim
-        shape = list(x.shape)
-        shape[0] = 1
-        mean1 = ops.summation(x, axes = 0) / x.shape[0]
-        
-        mean = ops.reshape(mean1, shape)
-        mean = ops.broadcast_to(mean, x.shape)
-        x1 = x - mean
-        x2 = x1 * x1
-        var1 = ops.summation(x2, axes = 0) / x.shape[0]
-        var = ops.reshape(var1, shape)
-        var = ops.broadcast_to(var, x.shape)
-        std = (var + self.eps) ** 0.5
-        x_hat = x1 / std
-
-        self.running_mean = (self.momentum * mean1
-                             + (1 - self.momentum) * self.running_mean).detach()
-    
-        self.running_var = (self.momentum * var1
-                            + (1 - self.momentum) * self.running_var).detach()
-
         if self.training:
-            y = self.weight * x_hat + self.bias
+            batch_mean = x.sum((0,)) / x.shape[0]
+            batch_var = ((x - batch_mean.broadcast_to(x.shape))**2).sum((0,)) / x.shape[0]
+            self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * batch_mean.data
+            self.running_var = (1 - self.momentum) * self.running_var + self.momentum * batch_var.data
+            norm = (x - batch_mean.broadcast_to(x.shape)) / (batch_var.broadcast_to(x.shape) + self.eps)**0.5
+            return self.weight.broadcast_to(x.shape) * norm + self.bias.broadcast_to(x.shape)
         else:
-            y = self.weight * (x - self.running_mean) / (self.running_var + self.eps) ** 0.5 + self.bias
-        return y
+            norm = (x - self.running_mean.broadcast_to(x.shape)) / (self.running_var.broadcast_to(x.shape) + self.eps)**0.5
+            return self.weight.broadcast_to(x.shape) * norm + self.bias.broadcast_to(x.shape)
+
 
 
 class LayerNorm1d(Module):
@@ -199,24 +184,25 @@ class LayerNorm1d(Module):
         super().__init__()
         self.dim = dim
         self.eps = eps
-        self.gamma = Parameter(init.ones(dim, device=device, dtype=dtype))
-        self.beta = Parameter(init.zeros(dim, device=device, dtype=dtype))
+        self.weight = Parameter(init.ones(dim, device=device, dtype=dtype))
+        self.bias = Parameter(init.zeros(dim, device=device, dtype=dtype))
 
     def forward(self, x: Tensor) -> Tensor:
         assert x.shape[-1] == self.dim 
+        assert x.numpy().ndim == 2
         shape = list(x.shape)
         shape[-1] = 1
         mean = ops.summation(x, axes = len(x.shape) - 1) / x.shape[-1]
         mean = ops.reshape(mean, shape)
         mean = ops.broadcast_to(mean, x.shape)
         x1 = x - mean
-        x2 = x1 * x1
+        x2 = x1 **2
         var = ops.summation(x2, axes = len(x.shape) - 1) / x.shape[-1]
         var = ops.reshape(var, shape)
         var = ops.broadcast_to(var, x.shape)
         std = (var + self.eps) ** 0.5
         x_hat = x1 / std
-        y = self.gamma * x_hat + self.beta
+        y = self.weight.broadcast_to(x.shape) * x_hat + self.bias.broadcast_to(x.shape)
         return y
 
 
