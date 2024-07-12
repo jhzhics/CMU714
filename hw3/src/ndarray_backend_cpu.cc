@@ -7,6 +7,42 @@
 #include <stdexcept>
 #include <vector>
 #include <cassert>
+#include <algorithm>
+
+#define EwiseFuncSingle(OpName, f)\
+void Ewise##OpName (const AlignedArray& a, AlignedArray* out) {\
+  for (size_t i = 0; i < a.size; i++) {\
+    out->ptr[i] = f(a.ptr[i]);\
+  }\
+}
+
+#define EwiseFuncOp(OpName, Op)\
+void Ewise##OpName (const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {\
+  for (size_t i = 0; i < a.size; i++) {\
+    out->ptr[i] = a.ptr[i] Op b.ptr[i];\
+  }\
+}
+
+#define EwiseFunc(OpName, f)\
+void Ewise##OpName (const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {\
+  for (size_t i = 0; i < a.size; i++) {\
+    out->ptr[i] = f(a.ptr[i], b.ptr[i]);\
+  }\
+}
+
+#define ScalarFuncOp(OpName, Op)\
+void Scalar##OpName(const AlignedArray& a, scalar_t val, AlignedArray* out) {\
+  for (size_t i = 0; i < a.size; i++) {\
+    out->ptr[i] = a.ptr[i] Op val;\
+  }\
+}
+
+#define ScalarFunc(OpName, f)\
+void Scalar##OpName(const AlignedArray& a, scalar_t val, AlignedArray* out) {\
+  for (size_t i = 0; i < a.size; i++) {\
+    out->ptr[i] = f(a.ptr[i],val);\
+  }\
+}
 
 namespace needle {
 namespace cpu {
@@ -180,25 +216,26 @@ void ScalarSetitem(const size_t size, scalar_t val, AlignedArray* out, std::vect
     carry(shape.size()-1);
   }
   /// END SOLUTION
+
 }
 
-void EwiseAdd(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
-  /**
-   * Set entries in out to be the sum of correspondings entires in a and b.
-   */
-  for (size_t i = 0; i < a.size; i++) {
-    out->ptr[i] = a.ptr[i] + b.ptr[i];
-  }
-}
+EwiseFuncOp(Add,+)
+EwiseFuncOp(Mul,*)
+EwiseFuncOp(Div,/)
+EwiseFunc(Maximum,std::max)
+EwiseFuncOp(Eq,==)
+EwiseFuncOp(Ge,>=)
+EwiseFuncSingle(Log,logf32)
+EwiseFuncSingle(Exp,expf32)
+EwiseFuncSingle(Tanh,tanhf32)
 
-void ScalarAdd(const AlignedArray& a, scalar_t val, AlignedArray* out) {
-  /**
-   * Set entries in out to be the sum of corresponding entry in a plus the scalar val.
-   */
-  for (size_t i = 0; i < a.size; i++) {
-    out->ptr[i] = a.ptr[i] + val;
-  }
-}
+ScalarFuncOp(Add,+)
+ScalarFuncOp(Mul,*)
+ScalarFuncOp(Div,/)
+ScalarFunc(Power,powf32)
+ScalarFunc(Maximum,std::max)
+ScalarFuncOp(Eq,==)
+ScalarFuncOp(Ge,>=)
 
 
 /**
@@ -366,22 +403,22 @@ PYBIND11_MODULE(ndarray_backend_cpu, m) {
   m.def("ewise_add", EwiseAdd);
   m.def("scalar_add", ScalarAdd);
 
-  // m.def("ewise_mul", EwiseMul);
-  // m.def("scalar_mul", ScalarMul);
-  // m.def("ewise_div", EwiseDiv);
-  // m.def("scalar_div", ScalarDiv);
-  // m.def("scalar_power", ScalarPower);
+  m.def("ewise_mul", EwiseMul);
+  m.def("scalar_mul", ScalarMul);
+  m.def("ewise_div", EwiseDiv);
+  m.def("scalar_div", ScalarDiv);
+  m.def("scalar_power", ScalarPower);
 
-  // m.def("ewise_maximum", EwiseMaximum);
-  // m.def("scalar_maximum", ScalarMaximum);
-  // m.def("ewise_eq", EwiseEq);
-  // m.def("scalar_eq", ScalarEq);
-  // m.def("ewise_ge", EwiseGe);
-  // m.def("scalar_ge", ScalarGe);
+  m.def("ewise_maximum", EwiseMaximum);
+  m.def("scalar_maximum", ScalarMaximum);
+  m.def("ewise_eq", EwiseEq);
+  m.def("scalar_eq", ScalarEq);
+  m.def("ewise_ge", EwiseGe);
+  m.def("scalar_ge", ScalarGe);
 
-  // m.def("ewise_log", EwiseLog);
-  // m.def("ewise_exp", EwiseExp);
-  // m.def("ewise_tanh", EwiseTanh);
+  m.def("ewise_log", EwiseLog);
+  m.def("ewise_exp", EwiseExp);
+  m.def("ewise_tanh", EwiseTanh);
 
   // m.def("matmul", Matmul);
   // m.def("matmul_tiled", MatmulTiled);

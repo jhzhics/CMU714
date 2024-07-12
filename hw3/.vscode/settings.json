@@ -57,7 +57,17 @@
     "streambuf": "cpp",
     "thread": "cpp",
     "cinttypes": "cpp",
-    "typeinfo": "cpp"
+    "typeinfo": "cpp",
+    "codecvt": "cpp",
+    "condition_variable": "cpp",
+    "forward_list": "cpp",
+    "list": "cpp",
+    "unordered_set": "cpp",
+    "mutex": "cpp",
+    "typeindex": "cpp",
+    "valarray": "cpp",
+    "variant": "cpp",
+    "__nullptr": "cpp"
   },
   "C_Cpp.default.configurationProvider": "go2sh.cmake-integration"
 }
