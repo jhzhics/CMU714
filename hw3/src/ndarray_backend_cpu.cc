@@ -9,6 +9,7 @@
 #include <cassert>
 #include <algorithm>
 
+
 #define EwiseFuncSingle(OpName, f)\
 void Ewise##OpName (const AlignedArray& a, AlignedArray* out) {\
   for (size_t i = 0; i < a.size; i++) {\
@@ -52,6 +53,17 @@ namespace cpu {
 typedef float scalar_t;
 const size_t ELEM_SIZE = sizeof(scalar_t);
 
+
+template<typename T, typename F>
+T reduce(const T * begin, const T * end, F f)
+{
+  T result = *begin;
+  for(auto it = ++begin; it != end; it++)
+  {
+    result = f(result, *it);
+  }
+  return result;
+}
 
 /**
  * This is a utility structure for maintaining an array aligned to ALIGNMENT boundaries in
@@ -346,7 +358,13 @@ void ReduceMax(const AlignedArray& a, AlignedArray* out, size_t reduce_size) {
    */
 
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  size_t size = out->size;
+  assert(a.size == size * reduce_size);
+  for(int i = 0; i < size; i++)
+  {
+    out->ptr[i] = reduce(a.ptr + i * reduce_size, a.ptr + (i+1) * reduce_size
+    , [](scalar_t a,scalar_t b){return std::max(a,b);});
+  }
   /// END SOLUTION
 }
 
@@ -361,7 +379,13 @@ void ReduceSum(const AlignedArray& a, AlignedArray* out, size_t reduce_size) {
    */
 
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  size_t size = out->size;
+  assert(a.size == size * reduce_size);
+  for(int i = 0; i < size; i++)
+  {
+    out->ptr[i] = reduce(a.ptr + i * reduce_size, a.ptr + (i+1) * reduce_size
+    , [](scalar_t a,scalar_t b){return a+b;});
+  }
   /// END SOLUTION
 }
 
@@ -423,6 +447,6 @@ PYBIND11_MODULE(ndarray_backend_cpu, m) {
   // m.def("matmul", Matmul);
   // m.def("matmul_tiled", MatmulTiled);
 
-  // m.def("reduce_max", ReduceMax);
-  // m.def("reduce_sum", ReduceSum);
+  m.def("reduce_max", ReduceMax);
+  m.def("reduce_sum", ReduceSum);
 }
