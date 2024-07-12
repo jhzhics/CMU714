@@ -1,0 +1,22 @@
+Performing C++ SOURCE FILE Test HAS_FLTO failed with the following output:
+Change Dir: /rshome/jiahao.zhang/workspace/CMU714/hw3/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_70ffe && [1/2] Building CXX object CMakeFiles/cmTC_70ffe.dir/src.cxx.o
+[2/2] Linking CXX executable cmTC_70ffe
+FAILED: cmTC_70ffe 
+: && /usr/bin/c++  -DHAS_FLTO   CMakeFiles/cmTC_70ffe.dir/src.cxx.o  -o cmTC_70ffe  -flto && :
+/usr/bin/ld: cannot find CMakeFiles/cmTC_70ffe.dir/src.cxx.o: No such file or directory
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+
+Source file was:
+int main() { return 0; }
+Detecting C compiler ABI info failed to compile with the following output:
+Change Dir: /rshome/jiahao.zhang/workspace/CMU714/hw3/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_deabc && ninja: error: loading 'build.ninja': No such file or directory
+
+
+
+
