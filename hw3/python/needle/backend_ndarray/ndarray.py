@@ -373,19 +373,20 @@ class NDArray:
         assert len(idxs) == self.ndim, "Need indexes equal to number of dimensions"
 
         ### BEGIN YOUR SOLUTION
+       
         offset = 0
         for i, s in enumerate(idxs):
             offset += s.start * self.strides[i]
-        new_shape = tuple([(s.stop - s.start) // s.step for s in idxs])
+        new_shape = tuple([(s.stop - s.start + s.step - 1) // s.step for s in idxs])
         new_strides = tuple([s.step * self.strides[i] for i, s in enumerate(idxs)])
-        out = self.as_strided(new_shape, new_strides)
-        out._offset = offset
+        out = self.make(new_shape, new_strides, device=self.device, handle=self._handle, offset=offset)
         return out
         ### END YOUR SOLUTION
 
     def __setitem__(self, idxs, other):
         """Set the values of a view into an array, using the same semantics
         as __getitem__()."""
+        
         view = self.__getitem__(idxs)
         if isinstance(other, NDArray):
             assert prod(view.shape) == prod(other.shape)

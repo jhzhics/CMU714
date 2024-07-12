@@ -5,6 +5,8 @@
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
+#include <vector>
+#include <cassert>
 
 namespace needle {
 namespace cpu {
@@ -62,7 +64,32 @@ void Compact(const AlignedArray& a, AlignedArray* out, std::vector<int32_t> shap
    *  function will implement here, so we won't repeat this note.)
    */
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  std::vector<int32_t> step_now(shape.size());
+  auto carry = [&](int i)
+  {
+    while(i > 0 && step_now[i] == shape[i])
+    {
+      step_now[i] = 0;
+      step_now[i-1]++;
+      i--;
+    }
+  };
+  auto get_index = [&]()->size_t
+  {
+    size_t index = offset;
+    for(int i = 0; i < shape.size(); i++)
+    {
+      index += step_now[i] * strides[i];
+    }
+    return index;
+  };
+  size_t size = out->size;
+  for(int i = 0; i < size; i++)
+  {
+    out->ptr[i] = a.ptr[get_index()];
+    step_now[shape.size()-1]++;
+    carry(shape.size()-1);
+  }
   /// END SOLUTION
 }
 
@@ -79,7 +106,33 @@ void EwiseSetitem(const AlignedArray& a, AlignedArray* out, std::vector<int32_t>
    *   offset: offset of the *out* array (not a, which has zero offset, being compact)
    */
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  std::vector<int32_t> step_now(shape.size());
+  auto carry = [&](int i)
+  {
+    while(i > 0 && step_now[i] == shape[i])
+    {
+      step_now[i] = 0;
+      step_now[i-1]++;
+      i--;
+    }
+  };
+  auto get_index = [&]()->size_t
+  {
+    size_t index = offset;
+    for(int i = 0; i < shape.size(); i++)
+    {
+      index += step_now[i] * strides[i];
+    }
+    return index;
+  };
+  size_t size = a.size;
+
+  for(int i = 0; i < size; i++)
+  {
+    out->ptr[get_index()] = a.ptr[i];
+    step_now[shape.size()-1]++;
+    carry(shape.size()-1);
+  }
   /// END SOLUTION
 }
 
@@ -100,7 +153,32 @@ void ScalarSetitem(const size_t size, scalar_t val, AlignedArray* out, std::vect
    */
 
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  std::vector<int32_t> step_now(shape.size());
+  auto carry = [&](int i)
+  {
+    while(i > 0 && step_now[i] == shape[i])
+    {
+      step_now[i] = 0;
+      step_now[i-1]++;
+      i--;
+    }
+  };
+  auto get_index = [&]()->size_t
+  {
+    size_t index = offset;
+    for(int i = 0; i < shape.size(); i++)
+    {
+      index += step_now[i] * strides[i];
+    }
+    return index;
+  };
+
+  for(int i = 0; i < size; i++)
+  {
+    out->ptr[get_index()] = val;
+    step_now[shape.size()-1]++;
+    carry(shape.size()-1);
+  }
   /// END SOLUTION
 }
 
