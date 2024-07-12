@@ -1,22 +1,62 @@
-Performing C++ SOURCE FILE Test HAS_FLTO failed with the following output:
+Performing C SOURCE FILE Test CMAKE_HAVE_LIBC_PTHREAD failed with the following output:
 Change Dir: /rshome/jiahao.zhang/workspace/CMU714/hw3/build/CMakeFiles/CMakeTmp
 
-Run Build Command(s):/usr/bin/ninja cmTC_70ffe && [1/2] Building CXX object CMakeFiles/cmTC_70ffe.dir/src.cxx.o
-[2/2] Linking CXX executable cmTC_70ffe
-FAILED: cmTC_70ffe 
-: && /usr/bin/c++  -DHAS_FLTO   CMakeFiles/cmTC_70ffe.dir/src.cxx.o  -o cmTC_70ffe  -flto && :
-/usr/bin/ld: cannot find CMakeFiles/cmTC_70ffe.dir/src.cxx.o: No such file or directory
+Run Build Command(s):/usr/bin/gmake cmTC_ac9c3/fast && gmake[1]: Entering directory '/rshome/jiahao.zhang/workspace/CMU714/hw3/build/CMakeFiles/CMakeTmp'
+/usr/bin/gmake -f CMakeFiles/cmTC_ac9c3.dir/build.make CMakeFiles/cmTC_ac9c3.dir/build
+gmake[2]: Entering directory '/rshome/jiahao.zhang/workspace/CMU714/hw3/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_ac9c3.dir/src.c.o
+/usr/bin/cc   -fPIC -DCMAKE_HAVE_LIBC_PTHREAD   -o CMakeFiles/cmTC_ac9c3.dir/src.c.o   -c /rshome/jiahao.zhang/workspace/CMU714/hw3/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_ac9c3
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ac9c3.dir/link.txt --verbose=1
+/usr/bin/cc -fPIC -DCMAKE_HAVE_LIBC_PTHREAD    CMakeFiles/cmTC_ac9c3.dir/src.c.o  -o cmTC_ac9c3 
+/usr/bin/ld: CMakeFiles/cmTC_ac9c3.dir/src.c.o: in function `main':
+src.c:(.text+0x46): undefined reference to `pthread_create'
+/usr/bin/ld: src.c:(.text+0x52): undefined reference to `pthread_detach'
+/usr/bin/ld: src.c:(.text+0x63): undefined reference to `pthread_join'
 collect2: error: ld returned 1 exit status
-ninja: build stopped: subcommand failed.
+gmake[2]: *** [CMakeFiles/cmTC_ac9c3.dir/build.make:87: cmTC_ac9c3] Error 1
+gmake[2]: Leaving directory '/rshome/jiahao.zhang/workspace/CMU714/hw3/build/CMakeFiles/CMakeTmp'
+gmake[1]: *** [Makefile:121: cmTC_ac9c3/fast] Error 2
+gmake[1]: Leaving directory '/rshome/jiahao.zhang/workspace/CMU714/hw3/build/CMakeFiles/CMakeTmp'
 
 
 Source file was:
-int main() { return 0; }
-Detecting C compiler ABI info failed to compile with the following output:
+#include <pthread.h>
+
+void* test_func(void* data)
+{
+  return data;
+}
+
+int main(void)
+{
+  pthread_t thread;
+  pthread_create(&thread, NULL, test_func, NULL);
+  pthread_detach(thread);
+  pthread_join(thread, NULL);
+  pthread_atfork(NULL, NULL, NULL);
+  pthread_exit(NULL);
+
+  return 0;
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
 Change Dir: /rshome/jiahao.zhang/workspace/CMU714/hw3/build/CMakeFiles/CMakeTmp
 
-Run Build Command(s):/usr/bin/ninja cmTC_deabc && ninja: error: loading 'build.ninja': No such file or directory
-
+Run Build Command(s):/usr/bin/gmake cmTC_241f9/fast && gmake[1]: Entering directory '/rshome/jiahao.zhang/workspace/CMU714/hw3/build/CMakeFiles/CMakeTmp'
+/usr/bin/gmake -f CMakeFiles/cmTC_241f9.dir/build.make CMakeFiles/cmTC_241f9.dir/build
+gmake[2]: Entering directory '/rshome/jiahao.zhang/workspace/CMU714/hw3/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_241f9.dir/CheckFunctionExists.c.o
+/usr/bin/cc   -fPIC -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTC_241f9.dir/CheckFunctionExists.c.o   -c /usr/share/cmake-3.16/Modules/CheckFunctionExists.c
+Linking C executable cmTC_241f9
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_241f9.dir/link.txt --verbose=1
+/usr/bin/cc -fPIC -DCHECK_FUNCTION_EXISTS=pthread_create    CMakeFiles/cmTC_241f9.dir/CheckFunctionExists.c.o  -o cmTC_241f9  -lpthreads 
+/usr/bin/ld: cannot find -lpthreads
+collect2: error: ld returned 1 exit status
+gmake[2]: *** [CMakeFiles/cmTC_241f9.dir/build.make:87: cmTC_241f9] Error 1
+gmake[2]: Leaving directory '/rshome/jiahao.zhang/workspace/CMU714/hw3/build/CMakeFiles/CMakeTmp'
+gmake[1]: *** [Makefile:121: cmTC_241f9/fast] Error 2
+gmake[1]: Leaving directory '/rshome/jiahao.zhang/workspace/CMU714/hw3/build/CMakeFiles/CMakeTmp'
 
 
 
