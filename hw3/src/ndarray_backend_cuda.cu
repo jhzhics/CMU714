@@ -103,6 +103,11 @@ namespace cuda {
 #define TILE 4
 typedef float scalar_t;
 const size_t ELEM_SIZE = sizeof(scalar_t);
+constexpr size_t V = 4;
+constexpr size_t L = 64;
+constexpr size_t BLOCK_TILE = L / V;
+constexpr size_t S_step = 4;
+constexpr size_t S = 64;
 
 struct CudaArray {
   CudaArray(const size_t size) {
@@ -116,7 +121,6 @@ struct CudaArray {
   scalar_t* ptr;
   size_t size;
 };
-
 struct CudaDims {
   dim3 block, grid;
 };
@@ -370,6 +374,74 @@ uint32_t N, uint32_t P)
   }
 }
 
+__global__ void MatmulKernel(const scalar_t* A, const scalar_t* B, scalar_t* out, uint32_t M,
+uint32_t N, uint32_t P)
+{
+  int x = (blockIdx.x * blockDim.x + threadIdx.x) * V;
+  int y = (blockIdx.y * blockDim.y + threadIdx.y) * V;
+
+  //assert(blockDim.x == L && blockDim.y == L) 
+  /*Shared Memory Prefetch*/
+
+  __shared__ scalar_t a_tile[L][S];
+  __shared__ scalar_t b_tile[S][L];
+  scalar_t a[V], b[V],c[V][V];
+  
+  for(int i=0;i<V;i++)
+  for(int j=0;j<V;j++)
+  {
+    c[i][j]=0;
+  }
+
+  int Vx_limit = V<M - x?V:M-x;
+  int Vy_limit = V<P - y?V:P-y;
+
+  for(int k = 0; k < N; k += S){
+    int limit = k + S < N ? k+S : N;
+    __syncthreads();
+
+    for(int ki = k + S_step * threadIdx.y
+    ; ki < limit; ki++)
+    {
+      for(int i = 0; i < V; i++){
+        int idx_x = (blockIdx.x * BLOCK_TILE + threadIdx.x) * V + i;
+        int idx_y = (blockIdx.y * BLOCK_TILE + threadIdx.x) * V + i;
+        if (idx_x < M)
+        {
+          a_tile[i +threadIdx.x*V][ki - k] = A[idx_x * N + ki];
+        }
+        if (idx_y < P)
+        {
+          b_tile[ki - k][i+threadIdx.x*V] = B[ki * P + idx_y];
+        }
+      }
+    }
+    __syncthreads();
+
+    for(int ki = k; ki < limit; ki++){
+      for(int i = 0; i < Vx_limit; i++){
+        a[i] = a_tile[i+V*threadIdx.x][ki - k];
+      }
+      for(int i = 0; i < Vy_limit; i++){
+        b[i] = b_tile[ki - k][i+V*threadIdx.y];
+      }
+      for(int i = 0; i < Vx_limit; i++){
+        for(int j = 0; j < Vy_limit; j++){
+          c[i][j] += a[i] * b[j];
+        }
+      }
+    }
+  }
+  
+  for(int i = 0; i < Vx_limit; i++){
+    for(int j = 0; j < Vy_limit; j++){
+
+      if(x + i < M && y + j < P)
+        out[(x + i) * P + y + j] = c[i][j];
+    }
+  }
+}
+
 
 void Matmul(const CudaArray& a, const CudaArray& b, CudaArray* out, uint32_t M, uint32_t N,
             uint32_t P) {
@@ -396,10 +468,15 @@ void Matmul(const CudaArray& a, const CudaArray& b, CudaArray* out, uint32_t M, 
    */
 
   /// BEGIN SOLUTION
-  dim3 block(16, 16, 1);
-  dim3 grid((M + block.x - 1) / block.x, (P + block.y - 1) / block.y, 1);
-  std::cout << M << std::endl << N << std::endl << P << std::endl;
-  NaiveMatmulKernel<<<grid, block>>>(a.ptr, b.ptr, out->ptr, M, N, P);
+  dim3 block(BLOCK_TILE, BLOCK_TILE, 1);
+  dim3 grid((M + L - 1) / L, (P + L - 1) / L, 1);
+  MatmulKernel<<<grid, block>>>(a.ptr, b.ptr, out->ptr, M, N, P);
+  auto cuda_err = cudaGetLastError();
+  if (cuda_err != cudaSuccess) {
+    std::stringstream ss;
+    ss << "CUDA error in matmul: " << cudaGetErrorString(cuda_err);
+    throw std::runtime_error(ss.str());
+  }
   /// END SOLUTION
 }
 
