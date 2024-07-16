@@ -53,24 +53,27 @@ endif()
 ####################
 ### CUDA BACKEND ###
 ####################
-find_package(CUDA)
+find_package(CUDA REQUIRED)
 if(CUDA_FOUND)
   message(STATUS "Found cuda, building cuda backend")
-
-  include_directories(SYSTEM ${CUDA_INCLUDE_DIRS})
   list(APPEND LINKER_LIBS ${CUDA_CUDART_LIBRARY})
-
+  
+  
   # invoke nvidia smi to detect if we really have a GPU
   execute_process(COMMAND "nvidia-smi" ERROR_QUIET  RESULT_VARIABLE NV_RET)
   if(NV_RET EQUAL "0")
-    CUDA_SELECT_NVCC_ARCH_FLAGS(ARCH_FLAGS Auto)
+  CUDA_SELECT_NVCC_ARCH_FLAGS(ARCH_FLAGS Auto)
   else()
-    # set to 3.7 the flag of K80
-    CUDA_SELECT_NVCC_ARCH_FLAGS(ARCH_FLAGS 3.7)
+  # set to 3.7 the flag of K80
+  CUDA_SELECT_NVCC_ARCH_FLAGS(ARCH_FLAGS 3.7)
   endif()
 
   # set arch flags properly
   CUDA_ADD_LIBRARY(ndarray_backend_cuda MODULE src/ndarray_backend_cuda.cu OPTIONS ${ARCH_FLAGS})
+  target_include_directories(ndarray_backend_cuda SYSTEM PRIVATE 
+  ${CUDA_INCLUDE_DIRS}
+  ${pybind11_INCLUDE_DIRS})
+
 
   target_link_libraries(ndarray_backend_cuda ${LINKER_LIBS})
   pybind11_extension(ndarray_backend_cuda)
