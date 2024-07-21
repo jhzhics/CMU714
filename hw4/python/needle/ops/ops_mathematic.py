@@ -332,14 +332,10 @@ class Greater_or_equal(TensorOp):
 
 class Tanh(TensorOp):
     def compute(self, a):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return array_api.tanh(a)
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return out_grad * (1 - tanh(node.inputs[0]) ** 2)
 
 
 def tanh(a):

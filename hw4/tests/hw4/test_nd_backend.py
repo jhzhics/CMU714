@@ -139,6 +139,7 @@ def test_tanh(shape, device):
 def test_tanh_backward(shape, device):
     _A = np.random.randn(*shape).astype(np.float32)
     A = ndl.Tensor(nd.array(_A), device=device)
+    
     backward_check(ndl.tanh, A)
 
 
