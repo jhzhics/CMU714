@@ -5,6 +5,45 @@
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
+#include <vector>
+#include <cassert>
+#include <algorithm>
+
+
+#define EwiseFuncSingle(OpName, f)\
+void Ewise##OpName (const AlignedArray& a, AlignedArray* out) {\
+  for (size_t i = 0; i < a.size; i++) {\
+    out->ptr[i] = f(a.ptr[i]);\
+  }\
+}
+
+#define EwiseFuncOp(OpName, Op)\
+void Ewise##OpName (const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {\
+  for (size_t i = 0; i < a.size; i++) {\
+    out->ptr[i] = a.ptr[i] Op b.ptr[i];\
+  }\
+}
+
+#define EwiseFunc(OpName, f)\
+void Ewise##OpName (const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {\
+  for (size_t i = 0; i < a.size; i++) {\
+    out->ptr[i] = f(a.ptr[i], b.ptr[i]);\
+  }\
+}
+
+#define ScalarFuncOp(OpName, Op)\
+void Scalar##OpName(const AlignedArray& a, scalar_t val, AlignedArray* out) {\
+  for (size_t i = 0; i < a.size; i++) {\
+    out->ptr[i] = a.ptr[i] Op val;\
+  }\
+}
+
+#define ScalarFunc(OpName, f)\
+void Scalar##OpName(const AlignedArray& a, scalar_t val, AlignedArray* out) {\
+  for (size_t i = 0; i < a.size; i++) {\
+    out->ptr[i] = f(a.ptr[i],val);\
+  }\
+}
 
 namespace needle {
 namespace cpu {
@@ -14,6 +53,17 @@ namespace cpu {
 typedef float scalar_t;
 const size_t ELEM_SIZE = sizeof(scalar_t);
 
+
+template<typename T, typename F>
+T reduce(const T * begin, const T * end, F f)
+{
+  T result = *begin;
+  for(auto it = ++begin; it != end; it++)
+  {
+    result = f(result, *it);
+  }
+  return result;
+}
 
 /**
  * This is a utility structure for maintaining an array aligned to ALIGNMENT boundaries in
@@ -62,7 +112,32 @@ void Compact(const AlignedArray& a, AlignedArray* out, std::vector<int32_t> shap
    *  function will implement here, so we won't repeat this note.)
    */
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  std::vector<int32_t> step_now(shape.size());
+  auto carry = [&](int i)
+  {
+    while(i > 0 && step_now[i] == shape[i])
+    {
+      step_now[i] = 0;
+      step_now[i-1]++;
+      i--;
+    }
+  };
+  auto get_index = [&]()->size_t
+  {
+    size_t index = offset;
+    for(int i = 0; i < shape.size(); i++)
+    {
+      index += step_now[i] * strides[i];
+    }
+    return index;
+  };
+  size_t size = out->size;
+  for(int i = 0; i < size; i++)
+  {
+    out->ptr[i] = a.ptr[get_index()];
+    step_now[shape.size()-1]++;
+    carry(shape.size()-1);
+  }
   /// END SOLUTION
 }
 
@@ -79,7 +154,33 @@ void EwiseSetitem(const AlignedArray& a, AlignedArray* out, std::vector<int32_t>
    *   offset: offset of the *out* array (not a, which has zero offset, being compact)
    */
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  std::vector<int32_t> step_now(shape.size());
+  auto carry = [&](int i)
+  {
+    while(i > 0 && step_now[i] == shape[i])
+    {
+      step_now[i] = 0;
+      step_now[i-1]++;
+      i--;
+    }
+  };
+  auto get_index = [&]()->size_t
+  {
+    size_t index = offset;
+    for(int i = 0; i < shape.size(); i++)
+    {
+      index += step_now[i] * strides[i];
+    }
+    return index;
+  };
+  size_t size = a.size;
+
+  for(int i = 0; i < size; i++)
+  {
+    out->ptr[get_index()] = a.ptr[i];
+    step_now[shape.size()-1]++;
+    carry(shape.size()-1);
+  }
   /// END SOLUTION
 }
 
@@ -100,27 +201,53 @@ void ScalarSetitem(const size_t size, scalar_t val, AlignedArray* out, std::vect
    */
 
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  std::vector<int32_t> step_now(shape.size());
+  auto carry = [&](int i)
+  {
+    while(i > 0 && step_now[i] == shape[i])
+    {
+      step_now[i] = 0;
+      step_now[i-1]++;
+      i--;
+    }
+  };
+  auto get_index = [&]()->size_t
+  {
+    size_t index = offset;
+    for(int i = 0; i < shape.size(); i++)
+    {
+      index += step_now[i] * strides[i];
+    }
+    return index;
+  };
+
+  for(int i = 0; i < size; i++)
+  {
+    out->ptr[get_index()] = val;
+    step_now[shape.size()-1]++;
+    carry(shape.size()-1);
+  }
   /// END SOLUTION
+
 }
 
-void EwiseAdd(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
-  /**
-   * Set entries in out to be the sum of correspondings entires in a and b.
-   */
-  for (size_t i = 0; i < a.size; i++) {
-    out->ptr[i] = a.ptr[i] + b.ptr[i];
-  }
-}
+EwiseFuncOp(Add,+)
+EwiseFuncOp(Mul,*)
+EwiseFuncOp(Div,/)
+EwiseFunc(Maximum,std::max)
+EwiseFuncOp(Eq,==)
+EwiseFuncOp(Ge,>=)
+EwiseFuncSingle(Log,logf32)
+EwiseFuncSingle(Exp,expf32)
+EwiseFuncSingle(Tanh,tanhf32)
 
-void ScalarAdd(const AlignedArray& a, scalar_t val, AlignedArray* out) {
-  /**
-   * Set entries in out to be the sum of corresponding entry in a plus the scalar val.
-   */
-  for (size_t i = 0; i < a.size; i++) {
-    out->ptr[i] = a.ptr[i] + val;
-  }
-}
+ScalarFuncOp(Add,+)
+ScalarFuncOp(Mul,*)
+ScalarFuncOp(Div,/)
+ScalarFunc(Power,powf32)
+ScalarFunc(Maximum,std::max)
+ScalarFuncOp(Eq,==)
+ScalarFuncOp(Ge,>=)
 
 
 /**
@@ -160,7 +287,14 @@ void Matmul(const AlignedArray& a, const AlignedArray& b, AlignedArray* out, uin
    */
 
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  for (uint32_t i = 0; i < m; i++) {
+    for (uint32_t j = 0; j < p; j++) {
+      out->ptr[i * p + j] = 0;
+      for (uint32_t k = 0; k < n; k++) {
+        out->ptr[i * p + j] += a.ptr[i * n + k] * b.ptr[k * p + j];
+      }
+    }
+  }
   /// END SOLUTION
 }
 
@@ -231,7 +365,13 @@ void ReduceMax(const AlignedArray& a, AlignedArray* out, size_t reduce_size) {
    */
 
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  size_t size = out->size;
+  assert(a.size == size * reduce_size);
+  for(int i = 0; i < size; i++)
+  {
+    out->ptr[i] = reduce(a.ptr + i * reduce_size, a.ptr + (i+1) * reduce_size
+    , [](scalar_t a,scalar_t b){return std::max(a,b);});
+  }
   /// END SOLUTION
 }
 
@@ -246,7 +386,13 @@ void ReduceSum(const AlignedArray& a, AlignedArray* out, size_t reduce_size) {
    */
 
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  size_t size = out->size;
+  assert(a.size == size * reduce_size);
+  for(int i = 0; i < size; i++)
+  {
+    out->ptr[i] = reduce(a.ptr + i * reduce_size, a.ptr + (i+1) * reduce_size
+    , [](scalar_t a,scalar_t b){return a+b;});
+  }
   /// END SOLUTION
 }
 
@@ -306,7 +452,7 @@ PYBIND11_MODULE(ndarray_backend_cpu, m) {
   m.def("ewise_tanh", EwiseTanh);
 
   m.def("matmul", Matmul);
-  m.def("matmul_tiled", MatmulTiled);
+  // m.def("matmul_tiled", MatmulTiled);
 
   m.def("reduce_max", ReduceMax);
   m.def("reduce_sum", ReduceSum);

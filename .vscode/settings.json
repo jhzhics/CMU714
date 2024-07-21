@@ -1,5 +1,6 @@
 {
   "python.analysis.extraPaths": [
     "./hw0/src"
-  ]
+  ],
+  "cmake.sourceDirectory": "/rshome/jiahao.zhang/workspace/CMU714/hw3"
 }
