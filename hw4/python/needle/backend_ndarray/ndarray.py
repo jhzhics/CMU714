@@ -484,6 +484,7 @@ class NDArray:
         out = NDArray.make(self.shape, device=self.device)
         self.device.ewise_log(self.compact()._handle, out._handle)
         return out
+    
 
     def exp(self):
         out = NDArray.make(self.shape, device=self.device)
@@ -622,3 +623,19 @@ def tanh(a):
 
 def sum(a, axis=None):
     return a.sum(axis=axis)
+
+def stack(arrays):
+    "Stack on axis 0"
+    new_shape = (len(arrays),) + arrays[0].shape
+    out = NDArray.make(new_shape, device = arrays[0].device)
+    out._device.stack_setitem([a.compact()._handle for a in arrays], out._handle)
+    return out
+
+def split(array):
+    "Split on axis 0"
+    array = array.compact()
+    num_array = array.shape[0]
+    new_shape = array.shape[1:]
+    arrays = [NDArray.make(new_shape, device=array.device) for _ in range(num_array)]
+    array._device.split_setitem(array._handle, [a._handle for a in arrays])
+    return tuple(arrays)

@@ -441,7 +441,28 @@ uint32_t N, uint32_t P)
     }
   }
 }
+void SplitSetitem(CudaArray * array_handle, std::vector<CudaArray *>& outs_handle) {
+  size_t size = outs_handle[0]->size;
+  size_t num_array = outs_handle.size();
+  for (int i = 0; i < num_array; i++) {
+    cudaMemcpy(outs_handle[i]->ptr,
+    array_handle->ptr + i * size,
+    size * ELEM_SIZE,
+    cudaMemcpyDeviceToDevice);
+  }
+}
 
+
+void StackSetitem(const std::vector<CudaArray *>& array_handles, CudaArray* out_handle) {
+  size_t size = array_handles[0]->size;
+  size_t num_array = array_handles.size();
+  for(int i = 0; i < num_array; i++){
+    cudaMemcpy(out_handle->ptr + i * size,
+    array_handles[i]->ptr,
+    size * ELEM_SIZE,
+    cudaMemcpyDeviceToDevice);
+  }
+}
 
 void Matmul(const CudaArray& a, const CudaArray& b, CudaArray* out, uint32_t M, uint32_t N,
             uint32_t P) {
@@ -611,4 +632,6 @@ PYBIND11_MODULE(ndarray_backend_cuda, m) {
 
   m.def("reduce_max", ReduceMax);
   m.def("reduce_sum", ReduceSum);
+  m.def("stack_setitem", StackSetitem);
+  m.def("split_setitem", SplitSetitem);
 }

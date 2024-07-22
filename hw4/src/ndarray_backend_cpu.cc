@@ -8,6 +8,7 @@
 #include <vector>
 #include <cassert>
 #include <algorithm>
+#include <cstring>
 
 
 #define EwiseFuncSingle(OpName, f)\
@@ -90,6 +91,28 @@ void Fill(AlignedArray* out, scalar_t val) {
    */
   for (int i = 0; i < out->size; i++) {
     out->ptr[i] = val;
+  }
+}
+
+void SplitSetitem(AlignedArray * array_handle, std::vector<AlignedArray *>& outs_handle) {
+  size_t size = outs_handle[0]->size,
+  tot_size = array_handle->size;
+
+  for(int i = 0; i < outs_handle.size(); i++)
+  {
+    memcpy(outs_handle[i]->ptr, array_handle->ptr +
+    i * size , size * ELEM_SIZE);
+  }
+
+}
+void StackSetitem(const std::vector<AlignedArray *>& array_handles, AlignedArray* out_handle) {
+  size_t size = array_handles[0]->size,
+  tot_size = out_handle->size;
+  
+  for(int i = 0; i < array_handles.size(); i++)
+  {
+    memcpy(out_handle->ptr + i*size, array_handles[i]->ptr
+    , size * ELEM_SIZE);
   }
 }
 
@@ -456,4 +479,7 @@ PYBIND11_MODULE(ndarray_backend_cpu, m) {
 
   m.def("reduce_max", ReduceMax);
   m.def("reduce_sum", ReduceSum);
+
+  m.def("stack_setitem", StackSetitem);
+  m.def("split_setitem", SplitSetitem);
 }

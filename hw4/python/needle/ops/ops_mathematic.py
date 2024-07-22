@@ -151,15 +151,12 @@ class Transpose(TensorOp):
         else:
             axes = self.axes
 
-        first = axes[0]
-        second = axes[1]
-        new_shape = list(a.shape)
-        new_shape[first] = a.shape[second]
-        new_shape[second] = a.shape[first]
-        new_strides = list(a.strides)
-        new_strides[first] = a.strides[second]
-        new_strides[second] = a.strides[first]
-        return a.as_strided(new_shape, new_strides)
+        permute_order = list(range(a.ndim))
+        permute_order[axes[0]] = axes[1]
+        permute_order[axes[1]] = axes[0]
+        return a.permute(permute_order)    
+
+
 
     def gradient(self, out_grad, node):
         return transpose(out_grad, axes=self.axes)
@@ -341,7 +338,6 @@ class Tanh(TensorOp):
 def tanh(a):
     return Tanh()(a)
 
-
 class Stack(TensorOp):
     def __init__(self, axis: int):
         """
@@ -353,15 +349,21 @@ class Stack(TensorOp):
         self.axis = axis
 
     def compute(self, args: TensorTuple) -> Tensor:
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
-
+        shape = args[0].shape
+        assert all(shape == arg.shape for arg in args)
+        out = array_api.stack(args)
+        permute_order = list(range(len(out.shape)))
+        permute_order[self.axis] = 0
+        for i in range(self.axis):
+            permute_order[i] = i + 1
+        out = out.permute(permute_order)
+        # print("stack",type(args[0]), type(out))
+        return out
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return split(out_grad, self.axis)
+        
+
 
 
 def stack(args, axis):
@@ -379,14 +381,17 @@ class Split(TensorTupleOp):
         self.axis = axis
 
     def compute(self, A):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        permute_order = list(range(len(A.shape)))
+        permute_order[0] = self.axis
+        for i in range(1, self.axis + 1):
+            permute_order[i] = i - 1
+        A = A.permute(permute_order)
+        out = array_api.split(A)
+        # print("split",type(A), type(out))
+        return out
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return stack(out_grad, self.axis)
 
 
 def split(a, axis):

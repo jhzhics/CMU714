@@ -189,7 +189,7 @@ class TensorTuple(Value):
 
     def detach(self):
         """Create a new tensor that shares the data but detaches from the graph."""
-        return Tuple.make_const(self.realize_cached_data())
+        return TensorTuple.make_const(self.realize_cached_data())
 
 
 class Tensor(Value):
@@ -378,17 +378,37 @@ def compute_gradient_of_variables(output_tensor, out_grad):
     """
     # a map from node to a list of gradient contributions from each output node
     node_to_output_grads_list: Dict[Tensor, List[Tensor]] = {}
+    
     # Special note on initializing gradient of
     # We are really taking a derivative of the scalar reduce_sum(output_node)
     # instead of the vector output_node. But this is the common case for loss function.
     node_to_output_grads_list[output_tensor] = [out_grad]
 
     # Traverse graph in reverse topological order given the output_node that we are taking gradient wrt.
-    reverse_topo_order = list(reversed(find_topo_sort([output_tensor])))
+    reverse_topo_order : list[Tensor] = list(reversed(find_topo_sort([output_tensor])))
+    ret = []
 
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
+    for node in reverse_topo_order:
+        node_to_grads = node_to_output_grads_list[node]
+        vi = node_to_grads[0]
+        for i in range(1, len(node_to_grads)):
+            vi = needle.add(vi, node_to_grads[i])
+        node.grad = vi
+            
+        if len(node.inputs) == 0:
+            ret.append(node)
+            continue
+
+        assert node.op is not None
+
+        grads = node.op.gradient_as_tuple(vi, node)
+        for (i, vk) in enumerate(node.inputs):
+            if vk not in node_to_output_grads_list:
+                node_to_output_grads_list[vk] = []
+            node_to_output_grads_list[vk].append(grads[i])
+
+    return ret
+
 
 
 def find_topo_sort(node_list: List[Value]) -> List[Value]:
@@ -399,16 +419,20 @@ def find_topo_sort(node_list: List[Value]) -> List[Value]:
     after all its predecessors are traversed due to post-order DFS, we get a topological
     sort.
     """
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
+    visited = set()
+    topo_order = []
 
+    def dfs(node):
+        if node in visited:
+            return
+        visited.add(node)
+        for input_node in node.inputs:
+            dfs(input_node)
+        topo_order.append(node)
+    for node in node_list:
+        dfs(node)
 
-def topo_sort_dfs(node, visited, topo_order):
-    """Post-order DFS"""
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
+    return topo_order
 
 
 ##############################
