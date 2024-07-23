@@ -639,3 +639,6 @@ def split(array):
     arrays = [NDArray.make(new_shape, device=array.device) for _ in range(num_array)]
     array._device.split_setitem(array._handle, [a._handle for a in arrays])
     return tuple(arrays)
+
+def array(a):
+    return NDArray(a)

@@ -231,7 +231,8 @@ class Tensor(Value):
     def _array_from_numpy(numpy_array, device, dtype):
         if array_api is numpy:
             return numpy.array(numpy_array, dtype=dtype)
-        return array_api.array(numpy_array, device=device, dtype=dtype)
+        print(f"Waring: dtype and device was ignored(not supported)")
+        return array_api.array(numpy_array)
 
     @staticmethod
     def make_from_op(op: Op, inputs: List["Value"]):
