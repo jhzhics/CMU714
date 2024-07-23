@@ -293,6 +293,49 @@ ScalarFuncOp(Ge,>=)
  * signatures above.
  */
 
+void Pad(const AlignedArray& a, AlignedArray* out, std::vector<int32_t> left_paddings,
+ std::vector<int32_t> right_paddings,
+ std::vector<int32_t> old_shape,
+ std::vector<int32_t> new_shape)
+{
+  assert(left_paddings.size() == old_shape.size() && 
+    right_paddings.size() == old_shape.size());
+  std::vector<int32_t> new_shape_product(new_shape.size());
+  new_shape_product.back()=1;
+  for(int i=new_shape_product.size()-2;i>=0;i--)
+  {
+    new_shape_product[i] = new_shape_product[i+1] * new_shape[i+1];
+  }
+  std::vector<int32_t> old_idx(old_shape.size());
+
+  auto carry = [&](int i)
+  {
+    while(i > 0 && old_idx[i] == old_shape[i])
+    {
+      old_idx[i] = 0;
+      old_idx[i-1]++;
+      i--;
+    }
+  };
+
+  auto get_index = [&]()
+  {
+    size_t index = 0;
+    for(int i = 0; i < old_shape.size(); i++)
+    {
+      index += (old_idx[i]+left_paddings[i])
+               * new_shape_product[i];
+    }
+    return index;
+  };
+  
+  for(int i=0;i<a.size;i++)
+  {
+    out->ptr[get_index()] = a.ptr[i];
+    old_idx.back()++;
+    carry(old_shape.size()-1);
+  }
+}
 
 void Matmul(const AlignedArray& a, const AlignedArray& b, AlignedArray* out, uint32_t m, uint32_t n,
             uint32_t p) {
@@ -482,4 +525,5 @@ PYBIND11_MODULE(ndarray_backend_cpu, m) {
 
   m.def("stack_setitem", StackSetitem);
   m.def("split_setitem", SplitSetitem);
+  m.def("pad", Pad);
 }
