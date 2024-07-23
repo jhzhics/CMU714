@@ -13,7 +13,9 @@ _DEVICES = [ndl.cpu(), pytest.param(ndl.cuda(),
 
 def backward_check(f, *args, **kwargs):
     eps = 1e-3
+    # print(args)
     out = f(*args, **kwargs)
+    # print(out)
     c = np.random.randn(*out.shape)
     is_stacked = False
     if isinstance(args[0], list):
@@ -126,6 +128,7 @@ def test_flip_forward(params, device):
 
 
 flip_backward_params = [
+    # {"shape": (7,), "axes": (0,)}
     {"shape": (10, 5), "axes": (0,)},
     {"shape": (10, 5), "axes": (1,)},
     {"shape": (10, 5), "axes": (0,1)},
