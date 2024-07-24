@@ -207,6 +207,69 @@ void EwiseSetitem(const AlignedArray& a, AlignedArray* out, std::vector<int32_t>
   /// END SOLUTION
 }
 
+// array.device.dilate(array._handle, out._handle, list(array.shape), new_shape, axes, dilation)
+void Dilate(const AlignedArray& a, AlignedArray* out, std::vector<int32_t> shape,
+            std::vector<int32_t> new_shape, std::vector<int32_t> axes, int32_t dilation) {
+  /**
+   * Dilate an array in memory
+   *
+   * Args:
+   *   a: compact representation of the array, given as input
+   *   out: compact version of the array to be written
+   *   shape: shapes of each dimension for a and out
+   *   new_shape: new shape of the out array
+   *   axes: axes to dilate
+   *   dilation: dilation factor
+   *
+   * Returns:
+   *  void (you need to modify out directly, rather than returning anything; this is true for all the
+   *  function will implement here, so we won't repeat this note.)
+   */
+  /// BEGIN SOLUTION
+  memset(out->ptr, 0, out->size * ELEM_SIZE);
+  std::vector<int32_t> step_now(shape.size());
+  std::vector<int32_t> shape_product(shape.size());
+  shape_product.back() = 1;
+  for(int i=shape_product.size()-2;i>=0;i--)
+  {
+    shape_product[i] = shape_product[i+1] * new_shape[i+1];
+  }
+  auto carry = [&](int i)
+  {
+    while(i > 0 && step_now[i] == shape[i])
+    {
+      step_now[i] = 0;
+      step_now[i-1]++;
+      i--;
+    }
+  };
+  auto get_index = [&]()->size_t
+  {
+    size_t index = 0;
+    for(int i = 0; i < shape.size(); i++)
+    {
+      if(std::find(axes.begin(), axes.end(), i) != axes.end())
+      {
+        index += (step_now[i] * (1+dilation)) * shape_product[i];
+      }
+      else
+      {
+        index += step_now[i] * shape_product[i];
+      }
+    }
+    return index;
+  };
+  size_t size = a.size;
+  for(int i = 0; i < size; i++)
+  {
+    out->ptr[get_index()] = a.ptr[i];
+    step_now.back()++;
+    carry(shape.size()-1);
+  }
+  /// END SOLUTION
+}
+
+
 void ScalarSetitem(const size_t size, scalar_t val, AlignedArray* out, std::vector<int32_t> shape,
                    std::vector<int32_t> strides, size_t offset) {
   /**
@@ -526,4 +589,7 @@ PYBIND11_MODULE(ndarray_backend_cpu, m) {
   m.def("stack_setitem", StackSetitem);
   m.def("split_setitem", SplitSetitem);
   m.def("pad", Pad);
+
+  
+  m.def("dilate", Dilate);
 }

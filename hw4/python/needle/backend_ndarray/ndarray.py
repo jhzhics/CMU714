@@ -143,7 +143,7 @@ class NDArray:
         array._offset = offset
         array._device = device if device is not None else default_device()
         if handle is None:
-            array._handle = array.device.Array(prod(shape))
+            array._handle = array._device.Array(prod(shape))
         else:
             array._handle = handle
         return array
@@ -652,5 +652,37 @@ def split(array):
     array._device.split_setitem(array._handle, [a._handle for a in arrays])
     return tuple(arrays)
 
-def array(a):
-    return NDArray(a)
+def array(a, device = None):
+    return NDArray(a, device)
+
+def dilate(array, axes, dilation):
+    array = array.compact()
+    new_shape = list(array.shape)
+    for axis in axes:
+        new_shape[axis] = array.shape[axis] * (1 + dilation)
+    out = NDArray.make(new_shape, device=array.device)
+    out._device.scalar_setitem(prod(out.shape), 0, out._handle, out.shape, out.strides, 0)
+    old_strides = list(out.strides)
+    new_strides = old_strides.copy()
+    for axis in axes:
+        new_strides[axis] *= 1 + dilation
+    # out = out.as_strided(array.shape, new_strides)
+    # print(f"axes:{axes},old_strides:{old_strides}, new_strides:{new_strides}")
+    out._device.ewise_setitem(array._handle, out._handle, array.shape, new_strides, 0)
+    # out = out.as_strided(new_shape, old_strides)
+    return out
+    
+def undilate(array, axes, dilation):
+    array = array.compact()
+    new_shape = list(array.shape)
+    for axis in axes:
+        new_shape[axis] = new_shape[axis] // (1 + dilation)
+    new_strides = list(array.strides)
+    for axis in axes:
+        new_strides[axis] *= 1 + dilation
+
+    # print(f"array.shape{array.shape},array.strides{array.strides}new_shape{new_shape}, new_strides{new_strides}")
+    out = array.as_strided(new_shape, new_strides)
+    out = out.compact()
+    # print(out)
+    return out

@@ -1,6 +1,7 @@
 """This file defies specific implementations of devices when using numpy as NDArray backend.
 """
 import numpy
+import functools
 
 
 class Device:
@@ -10,6 +11,17 @@ class Device:
 class CPUDevice(Device):
     """Represents data that sits in CPU"""
 
+    @staticmethod
+    def Array(size):
+        return numpy.empty(size)
+    
+    @staticmethod
+    def from_numpy(array : numpy.ndarray, handle : numpy.ndarray):
+        size1 = functools.reduce(lambda x, y: x * y, array.shape)
+        size2 = functools.reduce(lambda x, y: x * y, handle.shape)
+        assert size1 == size2, "Size mismatch"
+        numpy.copyto(handle, array.reshape(handle.shape))
+
     def __repr__(self):
         return "needle.cpu()"
 
@@ -18,6 +30,7 @@ class CPUDevice(Device):
 
     def __eq__(self, other):
         return isinstance(other, CPUDevice)
+    
 
     def enabled(self):
         return True

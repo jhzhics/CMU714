@@ -198,7 +198,8 @@ def test_resnet9(device):
 @pytest.mark.parametrize("device", _DEVICES)
 def test_dilate_forward(device):
     np.random.seed(0)
-    device = ndl.cpu()
+
+    # device = ndl.cpu()
 
     _A = np.random.randint(1, 10, size=(2, 5))
     A = ndl.Tensor(_A, device=device)

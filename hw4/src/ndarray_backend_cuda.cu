@@ -281,6 +281,31 @@ __global__ void ScalarSetitemKernel(size_t size, scalar_t val, scalar_t* out, Cu
   }
 }
 
+// __global__ void DilationSetitemKernel(const scalar_t* a, scalar_t* out, CudaVec shape,
+//                   CudaVec new_shape, size_t dilation, size_t size) {
+//   size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
+
+//   if (gid < size) {
+//     size_t idx = offset;
+//     size_t left = gid;
+//     for (int i = shape.size - 1; i >= 0; i--) {
+//       size_t mod = left % shape.data[i];
+//       idx += mod * strides.data[i];
+//       left /= shape.data[i];
+//     }
+//     out[idx] = a[gid];
+//   }
+// }
+
+// // dilate(array._handle, out._handle, list(array.shape), new_shape, axes, dilation)
+// void Dilate(CudaArray const*a, CudaArray*out,std::vector<int32_t> shape,
+//             std::vector<int32_t> new_shape, size_t dilation)
+// {
+//   cudaMemset(out->ptr, 0, out->size * ELEM_SIZE);
+
+// }
+
+
 void ScalarSetitem(size_t size, scalar_t val, CudaArray* out, std::vector<int32_t> shape,
                    std::vector<int32_t> strides, size_t offset) {
   /**
@@ -634,4 +659,6 @@ PYBIND11_MODULE(ndarray_backend_cuda, m) {
   m.def("reduce_sum", ReduceSum);
   m.def("stack_setitem", StackSetitem);
   m.def("split_setitem", SplitSetitem);
+
+  // m.def("dilate", Dilate);
 }
