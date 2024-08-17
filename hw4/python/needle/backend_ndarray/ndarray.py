@@ -686,3 +686,7 @@ def undilate(array, axes, dilation):
     out = out.compact()
     # print(out)
     return out
+
+def pad(array, padding):
+    out = array.pad(padding)
+    return out

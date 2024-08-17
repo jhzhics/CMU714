@@ -74,6 +74,7 @@ T reduce(const T * begin, const T * end, F f)
 struct AlignedArray {
   AlignedArray(const size_t size) {
     int ret = posix_memalign((void**)&ptr, ALIGNMENT, size * ELEM_SIZE);
+    memset(ptr, 0, size * ELEM_SIZE);
     if (ret != 0) throw std::bad_alloc();
     this->size = size;
   }

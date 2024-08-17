@@ -112,6 +112,7 @@ constexpr size_t S = 64;
 struct CudaArray {
   CudaArray(const size_t size) {
     cudaError_t err = cudaMalloc(&ptr, size * ELEM_SIZE);
+    cudaMemset(ptr, 0, size * ELEM_SIZE);
     if (err != cudaSuccess) throw std::runtime_error(cudaGetErrorString(err));
     this->size = size;
   }
@@ -588,6 +589,19 @@ void ReduceSum(const CudaArray& a, CudaArray* out, size_t reduce_size) {
   /// END SOLUTION
 }
 
+void Pad(const CudaArray& a, CudaArray* out ,
+ std::vector<int32_t> left_paddings,
+ std::vector<int32_t> right_paddings,
+ std::vector<int32_t> old_shape,
+std::vector<int32_t> new_shape)
+{
+  // assert(left_paddings.size == old_shape.size && 
+  //   right_paddings.size == old_shape.size);
+
+  printf("Cuda pad was called\n");
+}
+
+
 }  // namespace cuda
 }  // namespace needle
 
@@ -659,6 +673,7 @@ PYBIND11_MODULE(ndarray_backend_cuda, m) {
   m.def("reduce_sum", ReduceSum);
   m.def("stack_setitem", StackSetitem);
   m.def("split_setitem", SplitSetitem);
+  m.def("pad", Pad);
 
   // m.def("dilate", Dilate);
 }

@@ -357,7 +357,6 @@ class Stack(TensorOp):
         for i in range(self.axis):
             permute_order[i] = i + 1
         out = out.permute(permute_order)
-        # print("stack",type(args[0]), type(out))
         return out
 
     def gradient(self, out_grad, node):
@@ -387,7 +386,6 @@ class Split(TensorTupleOp):
             permute_order[i] = i - 1
         A = A.permute(permute_order)
         out = array_api.split(A)
-        # print("split",type(A), type(out))
         return out
 
     def gradient(self, out_grad, node):
@@ -469,7 +467,6 @@ class UnDilate(TensorOp):
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
         out = array_api.undilate(a, self.axes, self.dilation)
-        print(f"a:{a},out:{out},dilation:{self.dilation}")
         return out
         ### END YOUR SOLUTION
 
@@ -483,15 +480,39 @@ def undilate(a, axes, dilation):
     return UnDilate(axes, dilation)(a)
 
 
+# NHWC format
 class Conv(TensorOp):
     def __init__(self, stride: Optional[int] = 1, padding: Optional[int] = 0):
         self.stride = stride
         self.padding = padding
 
     def compute(self, A, B):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        # print(f"before pad A shape: {A.shape}, B shape: {B.shape}")
+        if not self.padding is None:
+            print ("Padding")
+            padding = [(0,0)]
+            for i in range(2):
+                padding.append((self.padding, self.padding))
+            padding.append((0,0))
+            A = array_api.pad(A, padding)
+
+        # print(f"after pad A shape: {A.shape}, B shape: {B.shape}")
+        print(A[0,0,0,0])
+        N, H, W, C = A.shape
+        KH, KW, CIN, COUT = B.shape
+        assert KH == KW and CIN == C
+        K = KH
+        new_H = (H - K) // self.stride + 1
+        new_W = (W - K) // self.stride + 1
+        A = A.as_strided((N,new_H,new_W,K,K,C),
+        (A.strides[0],A.strides[1] * self.stride,A.strides[2] * self.stride,
+         A.strides[1],A.strides[2],A.strides[3]))
+        A = A.compact()
+        A = A.reshape((N*new_H*new_W,K*K*C))
+        B = B.reshape((K*K*C,COUT))
+        out = A @ B
+        out = out.reshape((N,new_H,new_W,COUT))
+        return out
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
