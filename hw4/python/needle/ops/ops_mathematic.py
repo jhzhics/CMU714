@@ -165,6 +165,21 @@ class Transpose(TensorOp):
 def transpose(a, axes=None):
     return Transpose(axes)(a)
 
+class Permute(TensorOp):
+    def __init__(self, axes: tuple):
+        self.axes = axes
+
+    def compute(self, a):
+        return a.permute(self.axes)
+
+    def gradient(self, out_grad, node):
+        inverse_axes = [0] * len(self.axes)
+        for i in range(len(self.axes)):
+            inverse_axes[self.axes[i]] = i
+        return permute(out_grad, inverse_axes)
+
+def permute(a, axes):
+    return Permute(axes)(a)
 
 class Reshape(TensorOp):
     def __init__(self, shape):
@@ -487,7 +502,6 @@ class Conv(TensorOp):
         self.padding = padding
 
     def compute(self, A, B):
-        # print(f"before pad A shape: {A.shape}, B shape: {B.shape}")
         if not self.padding is None:
             padding = [(0,0)]
             for i in range(2):
@@ -500,6 +514,7 @@ class Conv(TensorOp):
         KH, KW, CIN, COUT = B.shape
         assert KH == KW and CIN == C
         K = KH
+
         new_H = (H - K) // self.stride + 1
         new_W = (W - K) // self.stride + 1
         A = A.as_strided((N,new_H,new_W,K,K,C),
@@ -507,15 +522,29 @@ class Conv(TensorOp):
          A.strides[1],A.strides[2],A.strides[3]))
         A = A.compact()
         A = A.reshape((N*new_H*new_W,K*K*C))
-        B = B.reshape((K*K*C,COUT))
+        B = B.compact().reshape((K*K*C,COUT))
         out = A @ B
         out = out.reshape((N,new_H,new_W,COUT))
         return out
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        out_grad = dilate(out_grad, (1,2), self.stride-1).detach()
+        flipped_weight = flip(node.inputs[1], (0,1)).detach()
+        flipped_weight = transpose(flipped_weight, (2,3)).detach()
+        KH, KW, _, _ = node.inputs[1].shape
+        assert KH == KW
+        K = KH
+        X_grad = conv(out_grad, flipped_weight,1,K-1-self.padding).detach()
+
+        permute_X = permute(node.inputs[0], (3,1,2,0)).detach()
+        permute_out_grad = permute(out_grad, (1, 2, 0, 3)).detach()
+
+        W_grad = conv(permute_X, permute_out_grad,1,self.padding).detach()
+        W_grad = permute(W_grad, (1, 2, 0, 3)).detach()
+
+        assert W_grad.shape == node.inputs[1].shape and X_grad.shape == node.inputs[0].shape
+
+        return X_grad, W_grad
 
 
 def conv(a, b, stride=1, padding=1):
