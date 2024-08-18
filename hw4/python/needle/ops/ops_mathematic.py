@@ -489,7 +489,6 @@ class Conv(TensorOp):
     def compute(self, A, B):
         # print(f"before pad A shape: {A.shape}, B shape: {B.shape}")
         if not self.padding is None:
-            print ("Padding")
             padding = [(0,0)]
             for i in range(2):
                 padding.append((self.padding, self.padding))
@@ -497,7 +496,6 @@ class Conv(TensorOp):
             A = array_api.pad(A, padding)
 
         # print(f"after pad A shape: {A.shape}, B shape: {B.shape}")
-        print(A[0,0,0,0])
         N, H, W, C = A.shape
         KH, KW, CIN, COUT = B.shape
         assert KH == KW and CIN == C

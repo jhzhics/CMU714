@@ -589,16 +589,49 @@ void ReduceSum(const CudaArray& a, CudaArray* out, size_t reduce_size) {
   /// END SOLUTION
 }
 
+__global__ void PadKernel(const scalar_t* a, scalar_t* out, size_t size, size_t old_size,
+CudaVec left_paddings, CudaVec right_paddings, CudaVec old_shape, CudaVec new_shape)
+{
+  int gid = blockIdx.x * blockDim.x + threadIdx.x;
+  //gid the place to fill
+
+  if (gid < size) {
+    int idx = 0;
+    int step = 1;
+    int left = gid;
+
+    for (int i = new_shape.size - 1; i >= 0; i--) {
+      int mod = left % new_shape.data[i];
+
+      if (mod < left_paddings.data[i] || mod >= left_paddings.data[i] + old_shape.data[i]) {
+        out[gid] = 0;
+        return;
+
+      } else {
+        idx += (mod - left_paddings.data[i]) * step;
+        step *= old_shape.data[i];
+      }
+
+      left /= new_shape.data[i];
+    }
+
+    out[gid] = a[idx];
+  }
+}
+
 void Pad(const CudaArray& a, CudaArray* out ,
  std::vector<int32_t> left_paddings,
  std::vector<int32_t> right_paddings,
  std::vector<int32_t> old_shape,
-std::vector<int32_t> new_shape)
+ std::vector<int32_t> new_shape)
 {
-  // assert(left_paddings.size == old_shape.size && 
-  //   right_paddings.size == old_shape.size);
+  assert(left_paddings.size() == old_shape.size() && 
+    right_paddings.size() == old_shape.size());
+  assert(new_shape.size() == old_shape.size());
+  CudaDims dim = CudaOneDim(out->size);
 
-  printf("Cuda pad was called\n");
+  PadKernel<<<dim.grid, dim.block>>>(a.ptr, out->ptr, out->size, a.size, 
+  VecToCuda(left_paddings), VecToCuda(right_paddings), VecToCuda(old_shape), VecToCuda(new_shape));
 }
 
 
